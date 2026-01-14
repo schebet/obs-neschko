@@ -2,7 +2,6 @@ import { useRef, useState, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { AudioVisualizer } from './AudioVisualizer';
 
 interface AudioPlayerProps {
   streamUrl: string;
@@ -189,13 +188,6 @@ export const AudioPlayer = ({ streamUrl, onAudioReady, isPlaying, setIsPlaying }
 
   return (
     <div className="space-y-4">
-      {/* Audio Visualizer */}
-      <AudioVisualizer 
-        audioContext={audioContextRef.current}
-        source={sourceRef.current}
-        isPlaying={isPlaying}
-      />
-
       {/* Stream Status */}
       <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border border-border">
         <div className={`p-2 rounded-full ${isPlaying ? 'bg-green-500/20 text-green-400' : 'bg-muted-foreground/20 text-muted-foreground'}`}>

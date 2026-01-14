@@ -1,6 +1,5 @@
-import { Circle, Square, Download, Loader2 } from 'lucide-react';
+import { Circle, Square, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { AudioFormat } from './RecordingSettings';
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -9,9 +8,6 @@ interface RecordingControlsProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   lastRecording: Blob | null;
-  fileName?: string;
-  audioFormat?: AudioFormat;
-  isConverting?: boolean;
 }
 
 const formatTime = (seconds: number): string => {
@@ -32,9 +28,6 @@ export const RecordingControls = ({
   onStartRecording,
   onStopRecording,
   lastRecording,
-  fileName = 'snimak',
-  audioFormat = 'webm',
-  isConverting = false,
 }: RecordingControlsProps) => {
   const downloadRecording = () => {
     if (!lastRecording) return;
@@ -42,10 +35,8 @@ export const RecordingControls = ({
     const url = URL.createObjectURL(lastRecording);
     const a = document.createElement('a');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const sanitizedFileName = fileName.trim() || 'snimak';
-    const extension = audioFormat === 'mp3' ? 'mp3' : 'webm';
     a.href = url;
-    a.download = `${sanitizedFileName}_${timestamp}.${extension}`;
+    a.download = `snimak_${timestamp}.webm`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -58,22 +49,12 @@ export const RecordingControls = ({
       <div className={`flex items-center justify-between p-4 rounded-lg border ${
         isRecording 
           ? 'bg-red-500/10 border-red-500/30' 
-          : isConverting
-          ? 'bg-yellow-500/10 border-yellow-500/30'
           : 'bg-muted/50 border-border'
       }`}>
         <div className="flex items-center gap-3">
-          {isConverting ? (
-            <Loader2 className="w-3 h-3 animate-spin text-yellow-500" />
-          ) : (
-            <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground/50'}`} />
-          )}
+          <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground/50'}`} />
           <span className="font-medium text-foreground">
-            {isConverting 
-              ? 'Konverzija u toku...' 
-              : isRecording 
-              ? 'Snimanje u toku' 
-              : 'Spremno za snimanje'}
+            {isRecording ? 'Snimanje u toku' : 'Spremno za snimanje'}
           </span>
         </div>
         <div className="font-mono text-xl text-foreground">
@@ -86,7 +67,7 @@ export const RecordingControls = ({
         {!isRecording ? (
           <Button
             onClick={onStartRecording}
-            disabled={!canRecord || isConverting}
+            disabled={!canRecord}
             className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white"
           >
             <Circle className="w-5 h-5 mr-2 fill-current" />
@@ -95,7 +76,6 @@ export const RecordingControls = ({
         ) : (
           <Button
             onClick={onStopRecording}
-            disabled={isConverting}
             className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white"
           >
             <Square className="w-5 h-5 mr-2 fill-current" />
@@ -103,7 +83,7 @@ export const RecordingControls = ({
           </Button>
         )}
 
-        {lastRecording && !isRecording && !isConverting && (
+        {lastRecording && !isRecording && (
           <Button
             onClick={downloadRecording}
             variant="outline"
