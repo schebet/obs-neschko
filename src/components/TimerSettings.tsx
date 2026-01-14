@@ -25,6 +25,7 @@ const formatTime = (seconds: number): string => {
 };
 
 const PRESET_DURATIONS = [
+  { label: '59 sekundi', value: 59 },
   { label: '5 minuta', value: 5 * 60 },
   { label: '15 minuta', value: 15 * 60 },
   { label: '30 minuta', value: 30 * 60 },

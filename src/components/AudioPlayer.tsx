@@ -41,49 +41,68 @@ export const AudioPlayer = ({ streamUrl, onAudioReady, isPlaying, setIsPlaying }
     setError(null);
 
     try {
-      // Create new audio element
+      // Clean up previous audio
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
       }
+      sourceRef.current = null;
 
       const audio = new Audio();
-      audio.crossOrigin = 'anonymous';
+      // Try without crossOrigin first for better compatibility
       audio.src = streamUrl;
       audio.volume = volume / 100;
       audioRef.current = audio;
 
-      // Create audio context if not exists
+      // Create audio context
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
         audioContextRef.current = new AudioContext();
       }
 
-      // Resume context if suspended
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
       }
 
-      // Create source node only once per audio element
-      if (!sourceRef.current) {
+      // Wait for audio to be playable
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Timeout pri učitavanju'));
+        }, 15000);
+
+        audio.oncanplay = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+
+        audio.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('Greška pri učitavanju stream-a'));
+        };
+
+        audio.load();
+      });
+
+      // Create source node for recording
+      try {
+        audio.crossOrigin = 'anonymous';
         sourceRef.current = audioContextRef.current.createMediaElementSource(audio);
         sourceRef.current.connect(audioContextRef.current.destination);
+      } catch (sourceErr) {
+        // If CORS fails, still allow playback without recording capability
+        console.warn('CORS ograničenje - snimanje možda neće raditi:', sourceErr);
       }
-
-      audio.oncanplay = () => {
-        setIsLoading(false);
-        onAudioReady(audio, audioContextRef.current!, sourceRef.current!);
-      };
-
-      audio.onerror = () => {
-        setIsLoading(false);
-        setError('Greška pri učitavanju stream-a. Proverite URL.');
-      };
 
       await audio.play();
       setIsPlaying(true);
-    } catch (err) {
       setIsLoading(false);
-      setError('Nije moguće reprodukovati stream. Proverite CORS podešavanja.');
+      
+      if (sourceRef.current) {
+        onAudioReady(audio, audioContextRef.current!, sourceRef.current!);
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      const errorMsg = err?.message || 'Nepoznata greška';
+      setError(`Greška: ${errorMsg}. Proverite da je URL ispravan i dostupan.`);
       console.error('Audio error:', err);
     }
   };
