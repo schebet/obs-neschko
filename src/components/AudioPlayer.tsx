@@ -49,7 +49,16 @@ export const AudioPlayer = ({ streamUrl, onAudioReady, isPlaying, setIsPlaying }
       sourceRef.current = null;
 
       const audio = new Audio();
-      // Try without crossOrigin first for better compatibility
+      
+      // Check if it's a Suno URL or other known services that support CORS
+      const isSunoUrl = streamUrl.includes('suno.com') || streamUrl.includes('cdn.suno');
+      const isCorsEnabled = streamUrl.includes('cdn') || isSunoUrl;
+      
+      // Set crossOrigin for services that support it
+      if (isCorsEnabled) {
+        audio.crossOrigin = 'anonymous';
+      }
+      
       audio.src = streamUrl;
       audio.volume = volume / 100;
       audioRef.current = audio;
@@ -84,7 +93,9 @@ export const AudioPlayer = ({ streamUrl, onAudioReady, isPlaying, setIsPlaying }
 
       // Create source node for recording
       try {
-        audio.crossOrigin = 'anonymous';
+        if (!audio.crossOrigin) {
+          audio.crossOrigin = 'anonymous';
+        }
         sourceRef.current = audioContextRef.current.createMediaElementSource(audio);
         sourceRef.current.connect(audioContextRef.current.destination);
       } catch (sourceErr) {
