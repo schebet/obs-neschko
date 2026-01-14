@@ -5,36 +5,53 @@ import { Label } from '@/components/ui/label';
 import { AudioPlayer } from './AudioPlayer';
 import { RecordingControls } from './RecordingControls';
 import { TimerSettings } from './TimerSettings';
+import { RecordingSettings, type AudioFormat } from './RecordingSettings';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useRecordingTimer } from '@/hooks/useRecordingTimer';
+import { toast } from 'sonner';
 
 export const StreamRecorder = () => {
   const [streamUrl, setStreamUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [lastRecording, setLastRecording] = useState<Blob | null>(null);
+  const [fileName, setFileName] = useState('snimak');
+  const [audioFormat, setAudioFormat] = useState<AudioFormat>('webm');
+  const [isConverting, setIsConverting] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const { isRecording, recordingTime, startRecording, stopRecording } = useAudioRecorder();
 
-  const handleStopAndDownload = useCallback(() => {
-    const blob = stopRecording();
+  const handleStopAndDownload = useCallback(async () => {
+    setIsConverting(true);
+    
+    if (audioFormat === 'mp3') {
+      toast.info('Konverzija u MP3 format...');
+    }
+    
+    const blob = await stopRecording(audioFormat);
+    
     if (blob) {
       setLastRecording(blob);
       // Auto download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const sanitizedFileName = fileName.trim() || 'snimak';
+      const extension = audioFormat === 'mp3' ? 'mp3' : 'webm';
       a.href = url;
-      a.download = `snimak_${timestamp}.webm`;
+      a.download = `${sanitizedFileName}_${timestamp}.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success(`Snimak sačuvan kao ${extension.toUpperCase()}`);
     }
+    
+    setIsConverting(false);
     resetCountdown();
-  }, [stopRecording]);
+  }, [stopRecording, fileName, audioFormat]);
 
   const {
     timerEnabled,
@@ -61,11 +78,21 @@ export const StreamRecorder = () => {
     }
   };
 
-  const handleStopRecording = () => {
-    const blob = stopRecording();
+  const handleStopRecording = async () => {
+    setIsConverting(true);
+    
+    if (audioFormat === 'mp3') {
+      toast.info('Konverzija u MP3 format...');
+    }
+    
+    const blob = await stopRecording(audioFormat);
+    
     if (blob) {
       setLastRecording(blob);
+      toast.success('Snimak spreman za preuzimanje');
     }
+    
+    setIsConverting(false);
     stopCountdown();
     resetCountdown();
   };
@@ -108,6 +135,15 @@ export const StreamRecorder = () => {
           setIsPlaying={setIsPlaying}
         />
 
+        {/* Recording Settings */}
+        <RecordingSettings
+          fileName={fileName}
+          setFileName={setFileName}
+          audioFormat={audioFormat}
+          setAudioFormat={setAudioFormat}
+          disabled={isRecording || isConverting}
+        />
+
         {/* Timer Settings */}
         <TimerSettings
           timerEnabled={timerEnabled}
@@ -122,10 +158,13 @@ export const StreamRecorder = () => {
         <RecordingControls
           isRecording={isRecording}
           recordingTime={recordingTime}
-          canRecord={isPlaying}
+          canRecord={isPlaying && !isConverting}
           onStartRecording={handleStartRecording}
           onStopRecording={handleStopRecording}
           lastRecording={lastRecording}
+          fileName={fileName}
+          audioFormat={audioFormat}
+          isConverting={isConverting}
         />
 
         {/* Info */}
@@ -134,6 +173,7 @@ export const StreamRecorder = () => {
           <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
             <li>Unesite URL audio stream-a (radio stanica, MP3 link...)</li>
             <li>Pritisnite Play za reprodukciju</li>
+            <li>Podesite ime fajla i format snimka</li>
             <li>Opciono: Uključite tajmer za automatsko zaustavljanje</li>
             <li>Pritisnite "Započni snimanje" za početak</li>
             <li>Snimak će se automatski preuzeti kada zaustavite snimanje</li>
