@@ -31,6 +31,17 @@ export const AudioPlayer = ({ streamUrl, onAudioReady, isPlaying, setIsPlaying }
     };
   }, []);
 
+  // Convert Suno page URLs to direct CDN audio URLs
+  const getDirectAudioUrl = (url: string): string => {
+    // Suno song page format: https://suno.com/song/UUID
+    const sunoSongMatch = url.match(/suno\.com\/song\/([a-f0-9-]+)/i);
+    if (sunoSongMatch) {
+      const songId = sunoSongMatch[1];
+      return `https://cdn1.suno.ai/${songId}.mp3`;
+    }
+    return url;
+  };
+
   const initializeAudio = async () => {
     if (!streamUrl) {
       setError('Unesite URL stream-a');
@@ -50,18 +61,23 @@ export const AudioPlayer = ({ streamUrl, onAudioReady, isPlaying, setIsPlaying }
 
       const audio = new Audio();
       
-      // Check if it's a Suno URL or other known services that support CORS
-      const isSunoUrl = streamUrl.includes('suno.com') || streamUrl.includes('cdn.suno');
-      const isCorsEnabled = streamUrl.includes('cdn') || isSunoUrl;
+      // Convert Suno URLs to direct CDN links
+      const directUrl = getDirectAudioUrl(streamUrl);
+      
+      // Check if it's a Suno CDN URL or other known services that support CORS
+      const isSunoCdn = directUrl.includes('cdn1.suno.ai') || directUrl.includes('cdn.suno');
+      const isCorsEnabled = directUrl.includes('cdn') || isSunoCdn;
       
       // Set crossOrigin for services that support it
       if (isCorsEnabled) {
         audio.crossOrigin = 'anonymous';
       }
       
-      audio.src = streamUrl;
+      audio.src = directUrl;
       audio.volume = volume / 100;
       audioRef.current = audio;
+      
+      console.log('Playing audio from:', directUrl);
 
       // Create audio context
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
